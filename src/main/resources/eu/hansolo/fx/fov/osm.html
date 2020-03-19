@@ -89,17 +89,6 @@
             map.panTo([x, y]);
         };
 
-		document.goToLocation      = function(x, y, acc, follow) {
-		    accuracy = acc;
-            document.showOnlineMarker();
-            onlineMarker.setLatLng([x, y]);         
-            onlineMarker.update();
-            accuracyCircle.setLatLng([x, y]);
-            accuracyCircle.setRadius(accuracy);
-            onlineMarker._icon.title = 'Tracked Object\nAccuracy: ' + accuracy.toFixed(1) + 'm';
-            if (follow) map.panTo([x, y]);
-		};
-
         document.addCameraMarker   = function(x, y) {
           if (cameraMarker != undefined) {
             document.removeLayer(cameraMarker);

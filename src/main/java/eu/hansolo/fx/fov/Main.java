@@ -82,11 +82,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
-/**
- * User: hansolo
- * Date: 13.03.20
- * Time: 11:59
- */
 public class Main extends Application {
     private static final Dimension2D              SIZE               = new Dimension2D(1000, 700);
     private static final String                   OPEN_STREET_MAP    = "osm.html";

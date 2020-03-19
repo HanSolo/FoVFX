@@ -16,6 +16,7 @@
 
 package eu.hansolo.fx.fov;
 
+
 public class Lenses {
     public static final Lens TAMRON_SP_15_30    = new Lens("Tamron SP 15-30mm f2.8", 15, 30, 2.8, 22);
     public static final Lens TAMRON_SP_24_70    = new Lens("Tamron SP 24-70mm f2.8", 24, 70, 2.8, 22);

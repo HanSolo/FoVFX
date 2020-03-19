@@ -16,6 +16,7 @@
 
 package eu.hansolo.fx.fov;
 
+
 public enum Orientation {
     LANDSCAPE("Landscape"),
     PORTRAIT("Portrait");

@@ -16,6 +16,7 @@
 
 package eu.hansolo.fx.fov;
 
+
 public enum SensorFormat {
     MEDIUM_FORMAT("Medium Format", 53.7, 40.2, 0.64),
     FULL_FORMAT("Full Format", 36, 23.9, 1.0),
