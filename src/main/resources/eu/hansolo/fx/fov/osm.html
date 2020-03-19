@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>    
+	<title>FoVFX Leaflet</title>
+    <link rel="stylesheet" href="leaflet.css" type="text/css" charset="utf-8"/>
+    <script>L_PREFER_CANVAS = true; </script>
+    <script type="text/javascript" src="leaflet.js"></script>    
+    <script type="text/javascript" src="leaflet-providers.js"></script>
+    <script type="text/javascript" src="turf.js"></script>
+</head>
+<style type="text/css">
+    html { height: 100% }
+    body { height: 100%; margin: 0px; padding: 0px; }
+    #map { width: 100%; height: 100%; }
+    /*#map_canvas { height: 100%; background-color: #666970; }*/
+</style>
+<body>
+<div id="map" style="width: 100%; height: 100%; position: relative;" class="leaflet-container leaflet-fade-anim" tabindex="0">
+	
+	<script type="text/javascript">
+        const triangleFill   = '#ff00ffc8'; /*'#ff00ff96';*/
+        const triangleStroke = '#ff00ff';
+
+        const trapezoidFill   = '#00ffffe1';
+        const trapezoidStroke = '#00ffff';
+
+        var map = L.map('map').setView([0, 0], 16);
+        map.on('move', function() { java.update(parseFloat(map.getCenter().lat), parseFloat(map.getCenter().lng)); });
+		map.attributionControl.setPrefix('');
+        map.removeControl(map.zoomControl);
+        //map.scrollWheelZoom.disable();
+        new L.control.zoom({position: 'bottomright'}).addTo(map);
+
+        // TileLayer
+        var googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+          maxZoom: 23,
+          subdomains:['mt0','mt1','mt2','mt3']
+        });
+        var googleSat    = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
+          maxZoom: 20,
+          subdomains:['mt0','mt1','mt2','mt3']
+        });
+        var googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+          maxZoom: 23,
+          subdomains:['mt0','mt1','mt2','mt3']
+        });
+        var googleTraffic = L.tileLayer('https://{s}.google.com/vt/lyrs=m@221097413,traffic&x={x}&y={y}&z={z}', {
+          maxZoom: 23,
+          minZoom: 2,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        });
+
+        map.addEventListener('mousedown', e => {
+          window.status = e.latlng.lat + "," + e.latlng.lng;
+        });
+
+        googleStreets.addTo(map);
+
+        L.control.layers({
+            "Street"   : googleStreets,
+            "Satellite": googleSat,
+            "Hybrid"   : googleHybrid,
+            "Traffic"  : googleTraffic
+        }).addTo(map);
+
+        L.control.scale({metric: true, imperial: false}).addTo(map);
+
+        var cameraIcon     = L.icon({
+                                     iconUrl    : 'cameraPin.png',
+                                     iconSize   : [28, 56],   // size of the icon
+                                     iconAnchor : [14, 56],   // point of the icon which will correspond to marker's location
+                                     popupAnchor: [12, -7]    // point from which the popup should open relative to the iconAnchor
+                                   });
+        var cameraMarker;
+
+        var motifIcon      = L.icon({
+                                      iconUrl    : 'motifPin.png',
+                                      iconSize   : [28, 56],   // size of the icon
+                                      iconAnchor : [14, 56],   // point of the icon which will correspond to marker's location
+                                      popupAnchor: [12, -7]    // point from which the popup should open relative to the iconAnchor
+                                    });
+        var motifMarker;
+
+        var line;
+        var triangle;
+        var trapezoid;
+
+        document.panTo             = function(x, y) {
+            map.panTo([x, y]);
+        };
+
+		document.goToLocation      = function(x, y, acc, follow) {
+		    accuracy = acc;
+            document.showOnlineMarker();
+            onlineMarker.setLatLng([x, y]);         
+            onlineMarker.update();
+            accuracyCircle.setLatLng([x, y]);
+            accuracyCircle.setRadius(accuracy);
+            onlineMarker._icon.title = 'Tracked Object\nAccuracy: ' + accuracy.toFixed(1) + 'm';
+            if (follow) map.panTo([x, y]);
+		};
+
+        document.addCameraMarker   = function(x, y) {
+          if (cameraMarker != undefined) {
+            document.removeLayer(cameraMarker);
+          }
+          cameraMarker = L.marker([x, y], {
+            icon       : cameraIcon,
+            draggable  : true,
+            riseOnHover: true,
+            riseOffset : 249,
+            title      : "Camera:" +
+                         "\nlat: " + x.toFixed(5) +
+                         "\nlon: " + y.toFixed(5)
+          }).addTo(map);
+          cameraMarker.addEventListener('mousedown', e => {
+            window.status = "moveCameraStart";
+          });
+          cameraMarker.addEventListener('mouseup', e => {
+            window.status = "moveCameraStop";
+            if (line != undefined) {
+              document.removeLayer(line);
+            }
+            const linePoints = Array();
+            linePoints.push(cameraMarker.getLatLng());
+            linePoints.push(motifMarker.getLatLng());
+            line = L.polyline(linePoints, {color: triangleStroke, weight: '1'}).addTo(map);
+          });
+          cameraMarker.addEventListener('mousemove', e => {
+              window.status = e.latlng.lat + "," + e.latlng.lng;
+            if (line != undefined) {
+              document.removeLayer(line);
+            }
+            const linePoints = Array();
+            linePoints.push(cameraMarker.getLatLng());
+            linePoints.push(motifMarker.getLatLng());
+            line = L.polyline(linePoints, {color: triangleStroke, weight: '1'}).addTo(map);
+          });
+        };
+        document.addMotifMarker    = function(x, y) {
+          if (motifMarker != undefined) {
+            document.removeLayer(motifMarker);
+          }
+          motifMarker = L.marker([x, y], {
+            icon       : motifIcon,
+            draggable  : true,
+            riseOnHover: true,
+            riseOffset : 249,
+            title      : "Motif:" +
+                         "\nlat: " + x.toFixed(5) +
+                         "\nlon: " + y.toFixed(5)
+          }).addTo(map);
+          motifMarker.addEventListener('mousedown', e => {
+            window.status = "moveMotifStart";
+          });
+          motifMarker.addEventListener('mouseup', e => {
+            window.status = "moveMotifStop";
+            if (line != undefined) {
+              document.removeLayer(line);
+            }
+            const linePoints = Array();
+            linePoints.push(cameraMarker.getLatLng());
+            linePoints.push(motifMarker.getLatLng());
+            line = L.polyline(linePoints, {color: triangleStroke, weight: '1'}).addTo(map);
+          });
+          motifMarker.addEventListener('mousemove', e => {
+              window.status = e.latlng.lat + "," + e.latlng.lng;
+              if (line != undefined) {
+                document.removeLayer(line);
+              }
+              const linePoints = Array();
+              linePoints.push(cameraMarker.getLatLng());
+              linePoints.push(motifMarker.getLatLng());
+              line = L.polyline(linePoints, {color: triangleStroke, weight: '1'}).addTo(map);
+          });
+        };
+
+        document.addTriangle       = function(pointString, angle) {
+          var latlngs = [];
+          var p       = pointString.split(",");
+          for (var i = 0 ; i < p.length - 1 ; i += 2) {
+            latlngs.push(L.latLng(parseFloat(p[i]), parseFloat(p[i + 1])));
+          }
+
+          const rotationCenter = map.latLngToLayerPoint(latlngs[0]);
+          for (var i = 1 ; i < latlngs.length ; i++) {
+            var p      = map.latLngToLayerPoint(latlngs[i]);
+            p          = document.rotatePointAroundRotationCenter(p, rotationCenter, angle);
+            latlngs[i] = map.layerPointToLatLng(p);
+          }
+
+          if (triangle != undefined) {
+            document.removeLayer(triangle);
+          }
+          triangle = L.polygon(latlngs, {fill: true, fillColor: triangleFill, stroke: true, color: triangleStroke, weight: '1', smoothFactor: 1.0}).addTo(map);
+        };
+
+        document.addTrapezoid       = function(pointString, angle) {
+          var latlngs = [];
+          var p       = pointString.split(",");
+          for (var i = 2 ; i < p.length - 1 ; i += 2) {
+            latlngs.push(L.latLng(parseFloat(p[i]), parseFloat(p[i + 1])));
+          }
+          // First point in point list is rotation center
+          const rotationCenter = map.latLngToLayerPoint(L.latLng(parseFloat(p[0]), parseFloat(p[1])));
+          for (var i = 0 ; i < latlngs.length ; i++) {
+            var p      = map.latLngToLayerPoint(latlngs[i]);
+            p          = document.rotatePointAroundRotationCenter(p, rotationCenter, angle);
+            latlngs[i] = map.layerPointToLatLng(p);
+          }
+
+          if (trapezoid != undefined) {
+            document.removeLayer(trapezoid);
+          }
+          trapezoid = L.polygon(latlngs, {fill: true, fillColor: trapezoidFill, stroke: true, color: trapezoidStroke, weight: '1', dashArray: '10, 10', dashOffset: '10', smoothFactor: 1.0}).addTo(map);
+        };
+
+        document.addLayer          = function(overlay) {
+            overlay.addTo(map);
+        };
+        document.removeLayer       = function(overlay) {            
+            map.removeLayer(overlay);
+        };
+
+        document.rotatePointAroundRotationCenter = function(point, rotationCenter, rad) {
+          const sin = Math.sin(rad);
+          const cos = Math.cos(rad);
+          const dX  = point.x - rotationCenter.x;
+          const dY  = point.y - rotationCenter.y;
+          point.x   = rotationCenter.x + (dX * cos) - (dY * sin);
+          point.y   = rotationCenter.y + (dX * sin) + (dY * cos);
+          return point;
+        }
+    </script>
+
+</div>
+</body>
+</html>
